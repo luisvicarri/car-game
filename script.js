@@ -20,7 +20,8 @@ scene.add(light);
 
 // Carregar o SVG
 const loader = new THREE.SVGLoader();
-loader.load("interlagos-track.svg", function (data) {
+// loader.load("interlagos-track.svg", function (data) {
+loader.load("/tracks/Brazil.svg", function(data) {
     const paths = data.paths;
     const trackPoints = [];
 
@@ -39,7 +40,7 @@ loader.load("interlagos-track.svg", function (data) {
 
     // Criar um perfil retangular CORRETAMENTE ORIENTADO para a pista
     const trackWidth = 20; // Largura da pista
-    const trackHeight = 2; // Pequena altura para garantir visibilidade
+    const trackHeight = 4; // Pequena altura para garantir visibilidade
 
     const trackShape = new THREE.Shape();
     trackShape.moveTo(0, -trackWidth / 2);
