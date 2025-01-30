@@ -1,80 +1,71 @@
+// Configuração básica da cena
 const scene = new THREE.Scene();
-const camera = new THREE.OrthographicCamera(-200, 200, 200, -200, 0.1, 1000);
-camera.position.set(0, 0, 500);
-camera.lookAt(0, 0, 0);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-renderer.setClearColor(0xeeeeee, 1);
+renderer.setClearColor(0x111111, 1); // Fundo escuro para melhor contraste
 
+// Controles da câmera
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.update();
+
+// Iluminação
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(50, 100, 50);
+scene.add(light);
+
+// Carregar o SVG
 const loader = new THREE.SVGLoader();
-
 loader.load("interlagos-track.svg", function (data) {
     const paths = data.paths;
-    const group = new THREE.Group();
+    const trackPoints = [];
 
     paths.forEach((path) => {
         const shapes = path.toShapes(true);
         shapes.forEach((shape) => {
-            const material = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-            const geometry = new THREE.BufferGeometry().setFromPoints(shape.getPoints());
-            const line = new THREE.Line(geometry, material);
-            group.add(line);
-
+            trackPoints.push(...shape.getPoints(300)); // Mais pontos para suavidade
         });
     });
 
-    group.scale.set(0.2, -0.2, 1);
-    group.position.set(0, 0, 0);
+    // Criar a curva do traçado da pista
+    const curve = new THREE.CatmullRomCurve3(
+        trackPoints.map(p => new THREE.Vector3(p.x * 0.5, -p.y * 0.5, 0)),
+        true // Fecha a curva
+    );
 
-    scene.add(group);
+    // Criar um perfil retangular CORRETAMENTE ORIENTADO para a pista
+    const trackWidth = 20; // Largura da pista
+    const trackHeight = 2; // Pequena altura para garantir visibilidade
 
-    // Criar e adicionar o carro na cena
-    const car = createCar();
-    car.position.set(0, 0, 0); // Posicionar na origem
-    scene.add(car);
+    const trackShape = new THREE.Shape();
+    trackShape.moveTo(0, -trackWidth / 2);
+    trackShape.lineTo(0, trackWidth / 2);
+    trackShape.lineTo(trackHeight, trackWidth / 2);
+    trackShape.lineTo(trackHeight, -trackWidth / 2);
+    trackShape.lineTo(0, -trackWidth / 2);
+
+    // Criar a geometria da pista extrudada ao longo da curva
+    const extrudeSettings = { steps: 300, bevelEnabled: false, extrudePath: curve };
+    const trackGeometry = new THREE.ExtrudeGeometry(trackShape, extrudeSettings);
+    const trackMaterial = new THREE.MeshStandardMaterial({ color: 0xffa500, side: THREE.DoubleSide });
+
+    const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+    scene.add(trackMesh);
+
 });
 
-camera.position.set(0, 0, 500);
+// Posicionamento da câmera
+camera.position.set(0, 300, 500); // Melhor ângulo para ver a pista
 camera.lookAt(0, 0, 0);
 
-// Função para criar o carro
-function createCar() {
-    const car = new THREE.Group();
-
-    // Corpo principal do carro
-    const bodyGeometry = new THREE.BoxGeometry(10, 5, 5);
-    const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Vermelho
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    car.add(body);
-
-    // Rodas (4 cilindros)
-    const wheelGeometry = new THREE.CylinderGeometry(1, 1, 2, 16);
-    const wheelMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Preto
-    const wheelPositions = [
-        [-4, -3, 2], [4, -3, 2], // Frente
-        [-4, -3, -2], [4, -3, -2] // Traseira
-    ];
-    wheelPositions.forEach(([x, y, z]) => {
-        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        wheel.rotation.z = Math.PI / 2; // Girar para alinhar com o eixo X
-        wheel.position.set(x, y, z);
-        car.add(wheel);
-    });
-
-    // Cabeçote do carro
-    const headGeometry = new THREE.BoxGeometry(4, 2, 3);
-    const headMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Verde
-    const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.set(0, 3, 0);
-    car.add(head);
-
-    return car;
-}
-
+// Função de animação
 function animate() {
     requestAnimationFrame(animate);
+    controls.update();
     renderer.render(scene, camera);
 }
 
