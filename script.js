@@ -27,6 +27,51 @@ let trackBounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infi
 
 // Carregar o SVG da pista
 const loader = new THREE.SVGLoader();
+// Adicionar retângulos para contorno da pista
+function addTrackBorders() {
+    const offsetDistance = 10; // Distância do contorno para as bordas da pista
+    const rectangleWidth = 5; // Largura de cada retângulo
+    const rectangleHeight = 2; // Altura de cada retângulo
+    const points = curve.getPoints(700); // Dividir a curva em pontos
+    let colorToggle = true; // Alternar entre vermelho e branco
+
+    points.forEach((currentPoint, i) => {
+        if (i + 1 < points.length) {
+            const nextPoint = points[i + 1]; // Próximo ponto
+            const tangent = nextPoint.clone().sub(currentPoint).normalize(); // Vetor tangente
+            const normal = new THREE.Vector3(-tangent.y, tangent.x, 0); // Vetor normal (perpendicular)
+
+            // Calcular posição para os retângulos das bordas esquerda e direita
+            const leftPosition = currentPoint.clone().add(normal.clone().multiplyScalar(offsetDistance));
+            const rightPosition = currentPoint.clone().add(normal.clone().multiplyScalar(-offsetDistance));
+
+            // Criar retângulos
+            createBorderRectangle(leftPosition, tangent, rectangleWidth, rectangleHeight, colorToggle ? 0xffffff : 0xff0000); // Esquerda
+            createBorderRectangle(rightPosition, tangent, rectangleWidth, rectangleHeight, colorToggle ? 0xffffff : 0xff0000); // Direita
+
+            // Alternar cor
+            colorToggle = !colorToggle;
+        }
+    });
+}
+
+// Função para criar um retângulo e adicionar ao cenário
+function createBorderRectangle(position, tangent, width, height, color) {
+    const geometry = new THREE.PlaneGeometry(width, height);
+    const material = new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide });
+
+    const rectangle = new THREE.Mesh(geometry, material);
+
+    // Alinhar o retângulo com a tangente
+    const angle = Math.atan2(tangent.y, tangent.x);
+    rectangle.rotation.z = angle;
+
+    // Posicionar no ponto correto
+    rectangle.position.set(position.x, position.y, position.z + 0.1); // Leve elevação para evitar sobreposição com a pista
+    scene.add(rectangle);
+}
+
+// Chamar a função para criar as bordas após carregar o circuito
 loader.load("/tracks/Brazil.svg", function (data) {
     const paths = data.paths;
     const trackPoints = [];
@@ -74,6 +119,9 @@ loader.load("/tracks/Brazil.svg", function (data) {
 
     // Criar plano de gramado com base nos limites da pista
     createGrassPlane();
+
+    // Adicionar as bordas da pista
+    addTrackBorders();
 });
 
 // Função para criar um plano de gramado dinâmico
