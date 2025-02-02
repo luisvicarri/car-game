@@ -22,17 +22,28 @@ scene.add(light);
 let vehicle;
 let curve;
 let progress = 0;
+// Variáveis globais para armazenar limites da pista
+let trackBounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
 
-// Carregar o SVG
+// Carregar o SVG da pista
 const loader = new THREE.SVGLoader();
-loader.load("/tracks/Suzuka.svg", function (data) {
+loader.load("/tracks/Brazil.svg", function (data) {
     const paths = data.paths;
     const trackPoints = [];
 
     paths.forEach((path) => {
         const shapes = path.toShapes(true);
         shapes.forEach((shape) => {
-            trackPoints.push(...shape.getPoints(1000));
+            const points = shape.getPoints(1000);
+            trackPoints.push(...points);
+
+            // Atualizar os limites da pista
+            points.forEach(p => {
+                if (p.x < trackBounds.minX) trackBounds.minX = p.x;
+                if (p.x > trackBounds.maxX) trackBounds.maxX = p.x;
+                if (p.y < trackBounds.minY) trackBounds.minY = p.y;
+                if (p.y > trackBounds.maxY) trackBounds.maxY = p.y;
+            });
         });
     });
 
@@ -61,7 +72,24 @@ loader.load("/tracks/Suzuka.svg", function (data) {
     const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
     scene.add(trackMesh);
 
+    // Criar plano de gramado com base nos limites da pista
+    createGrassPlane();
 });
+
+// Função para criar um plano de gramado dinâmico
+function createGrassPlane() {
+    const width = (trackBounds.maxX - trackBounds.minX) * 0.6;
+    const height = (trackBounds.maxY - trackBounds.minY) * 0.6;
+    const planeGeometry = new THREE.PlaneGeometry(width, height);
+    const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, side: THREE.DoubleSide });
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.position.set(
+        (trackBounds.maxX + trackBounds.minX) * 0.5 * 0.5,
+        (trackBounds.maxY + trackBounds.minY) * -0.5 * 0.5,
+        -1
+    );
+    scene.add(plane);
+}
 
 // Importar veículo
 const gltfLoader = new THREE.GLTFLoader();
