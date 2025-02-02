@@ -3,6 +3,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true; // Habilitar sombras
 document.body.appendChild(renderer.domElement);
 
 renderer.setClearColor(0x111111, 1);
@@ -13,10 +14,23 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.update();
 
-// Iluminação
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(100, 100, 150);
-scene.add(light);
+// Iluminação simulando o sol, ajustada para luz mais natural
+const sunLight = new THREE.DirectionalLight(0xFFD1A9, 0.7); // Cor suave e intensidade ajustada
+sunLight.position.set(300, 300, 300); // Posicionar a luz "do sol"
+sunLight.castShadow = true; // Habilitar sombras
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 0.1;
+sunLight.shadow.camera.far = 1000;
+scene.add(sunLight);
+
+// // Adicionar helper para visualizar a luz
+// const lightHelper = new THREE.DirectionalLightHelper(sunLight, 50);
+// scene.add(lightHelper);
+
+// Luz ambiente para suavizar o contraste
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
 
 // Variáveis globais
 let vehicle;
@@ -27,6 +41,7 @@ let trackBounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infi
 
 // Carregar o SVG da pista
 const loader = new THREE.SVGLoader();
+
 // Adicionar retângulos para contorno da pista
 function addTrackBorders() {
     const offsetDistance = 10; // Distância do contorno para as bordas da pista
@@ -69,6 +84,22 @@ function createBorderRectangle(position, tangent, width, height, color) {
     // Posicionar no ponto correto
     rectangle.position.set(position.x, position.y, position.z + 0.1); // Leve elevação para evitar sobreposição com a pista
     scene.add(rectangle);
+}
+
+// Função para adicionar o traçado pontilhado
+function addDashedLine() {
+    const points = curve.getPoints(700); // Dividir a curva em pontos
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+    const material = new THREE.LineDashedMaterial({
+        color: 0xffffff,
+        dashSize: 3,
+        gapSize: 10
+    });
+
+    const line = new THREE.Line(geometry, material);
+    line.computeLineDistances(); // Necessário para o material pontilhado
+    scene.add(line);
 }
 
 // Chamar a função para criar as bordas após carregar o circuito
@@ -115,6 +146,7 @@ loader.load("/tracks/Brazil.svg", function (data) {
     const trackMaterial = new THREE.MeshStandardMaterial({ color: 0xD3D3D3, side: THREE.DoubleSide });
 
     const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+    trackMesh.receiveShadow = true; // Receber sombras
     scene.add(trackMesh);
 
     // Criar plano de gramado com base nos limites da pista
@@ -122,6 +154,9 @@ loader.load("/tracks/Brazil.svg", function (data) {
 
     // Adicionar as bordas da pista
     addTrackBorders();
+
+    // Adicionar o traçado pontilhado
+    addDashedLine();
 });
 
 // Função para criar um plano de gramado dinâmico
@@ -136,6 +171,7 @@ function createGrassPlane() {
         (trackBounds.maxY + trackBounds.minY) * -0.5 * 0.5,
         -1
     );
+    plane.receiveShadow = true; // Receber sombras
     scene.add(plane);
 }
 
@@ -145,6 +181,7 @@ gltfLoader.load("/cars/f1_car.glb", function (gltf) {
     vehicle = gltf.scene;
     vehicle.scale.set(3, 3, 3);
     vehicle.rotation.set(Math.PI / 2, 0, Math.PI);
+    vehicle.castShadow = true; // Projeta sombras
     scene.add(vehicle);
 });
 
