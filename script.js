@@ -18,8 +18,8 @@ controls.update();
 const sunLight = new THREE.DirectionalLight(0xFFD1A9, 0.7); // Cor suave e intensidade ajustada
 sunLight.position.set(300, 300, 300); // Posicionar a luz "do sol"
 sunLight.castShadow = true; // Habilitar sombras
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.mapSize.width = 1024;
+sunLight.shadow.mapSize.height = 1024;
 sunLight.shadow.camera.near = 0.1;
 sunLight.shadow.camera.far = 1000;
 scene.add(sunLight);
